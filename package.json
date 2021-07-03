@@ -1,0 +1,15 @@
+{
+  "name": "app.twitch.chatbotmedia",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "obs-websocket-js": "^4.0.2",
+    "tmi.js": "^1.8.3"
+  }
+}
