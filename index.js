@@ -1,12 +1,3 @@
-/*
-- Cliente Twitch IRC Client:
-  - https://github.com/tmijs/tmi.js
-- OBS Websocket
-  - https://github.com/Palakis/obs-websocket/releases/tag/4.9.1
-- Cliente OBS Websocket para JavaScript
-  - https://github.com/obs-websocket-community-projects/obs-websocket-js
-*/
-
 const path = require('path');
 const fs = require('fs');
 const tmi = require('tmi.js');
