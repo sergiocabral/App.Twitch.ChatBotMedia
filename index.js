@@ -34,6 +34,7 @@ const global = {
         'tá': 'está',
         'tah': 'está',
         'doido': 'louco',
+        'doideira': 'louco',
         'loco': 'louco',
         'loko': 'louco',
         'locura': 'loucura',
@@ -48,7 +49,8 @@ const global = {
         'pra': 'para',
         'va': 'vai',
         'é': 'eh',
-        'vô': 'vou'
+        'vô': 'vou',
+        'dança': 'dançar'
     }
 };
 
@@ -174,13 +176,11 @@ function findRandomSentenceFile(message) {
     const messageSlug = slugWithCorrelation(message);
     const possibleKeys = Object.keys(sentences).filter(sentenceKey => messageSlug.includes(sentenceKey));
 
-    if (possibleKeys.length === 0) return undefined;
-
     const sentenceFilesData = getSentencesForKeys(possibleKeys)
         .filter(sentenceFileData => 
             filterSentenceFileData(messageSlug, sentenceFileData.key, sentenceFileData.isQuoted));
     
-    return getArrayRandomValue(sentenceFilesData).fullpath;
+    return getArrayRandomValue(sentenceFilesData)?.fullpath;
 }
 
 async function tryPlayMessageAsMedia(message) {
