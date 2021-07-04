@@ -4,20 +4,10 @@ const tmi = require('tmi.js');
 const OBSWebSocket = require('obs-websocket-js');
 
 const global = {
-    /**
-     * @type {OBSWebSocket}
-     */
     obs: null,
-
-    /**
-     * @type {tmi.Client}
-     */
     irc: null,
-
     environment: require('./env.json'),
-
     sentences: [],
-
     correlations: { },
 };
 
