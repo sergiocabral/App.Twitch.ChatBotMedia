@@ -57,8 +57,8 @@ const global = {
 
 String.prototype.removeAccents = function() {
     return this
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
 }
 
 String.prototype.slug = function() {
@@ -78,7 +78,8 @@ function slugWithCorrelationReplacement(message) {
     for (let from of Object.keys(correlation)) {
         const to = correlation[from].slug();
         from = from.slug();
-        message = message.replace(new RegExp('\\b' + from + '\\b', 'g'), to);
+        const regexIsolatedWordFrom = new RegExp('\\b' + from + '\\b', 'g');
+        message = message.replace(regexIsolatedWordFrom, to);
     }
     return message;
 }
@@ -114,11 +115,10 @@ function getMedias() {
         .filter(file => 
             mediaFileExtensions.filter(mediaFileExtension =>
                 file.toLowerCase().endsWith(`.${mediaFileExtension}`)).length);
-    return files
-        .map(file => path.resolve(directory, file));
+    return files.map(file => path.resolve(directory, file));
 }
 
-function loadSentencesDatabase(mediaFiles) {
+function factorySentencesDatabase(mediaFiles) {
     const result = { };
     mediaFiles.forEach(fullpath => {
         const filename = path.basename(fullpath);
@@ -136,14 +136,14 @@ function loadSentencesDatabase(mediaFiles) {
     return result;
 }
 
-function loadSentencesIfNecessary() {
+function loadSentences() {
     const mediaFiles = getMedias();
     const signature = mediaFiles.join('');
-    if (global.__loadSentencesIfNecessarySignature != signature) {
-        global.__loadSentencesIfNecessarySignature = signature;
-        global.sentences = loadSentencesDatabase(mediaFiles);
+    if (global.__loadSentencesSignature != signature) {
+        global.__loadSentencesSignature = signature;
+        global.sentences = factorySentencesDatabase(mediaFiles);
     }
-    setTimeout(loadSentencesIfNecessary, global.env.FileCheckInterval);
+    setTimeout(loadSentences, global.env.FileCheckInterval);
 }
 
 function filterSentenceFileData(messageSlug, messageKey, isQuoted) {
@@ -184,16 +184,18 @@ function findRandomSentenceFile(message) {
     return getArrayRandomValue(sentenceFilesData)?.fullpath;
 }
 
-async function tryPlayMessageAsMedia(message) {
+async function playMediaIntoOBS(filePath) {
     const obs = global.obs;
+    await obs.send(
+        'SetSourceSettings', {
+            sourceName: global.env.ObsSourceName,
+            sourceSettings: { local_file: filePath }
+    });
+}
+
+async function tryPlayMessageAsMedia(message) {
     const sentenceFileFullpath = findRandomSentenceFile(message);
-    if (sentenceFileFullpath) {
-        await obs.send(
-            'SetSourceSettings', {
-                sourceName: global.env.ObsSourceName,
-                sourceSettings: { local_file: sentenceFileFullpath }
-        });
-    }
+    if (sentenceFileFullpath) await playMediaIntoOBS(sentenceFileFullpath);
 }
 
 async function onMessage(channel, tags, message, self) {
@@ -201,7 +203,7 @@ async function onMessage(channel, tags, message, self) {
 }
 
 async function main() {
-    loadSentencesIfNecessary();
+    loadSentences();
     global.obs = await connectToObs();
     global.irc = await connectToTwitchChat();
     global.irc.on('message', onMessage);
