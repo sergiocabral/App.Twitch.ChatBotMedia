@@ -7,22 +7,11 @@
   - https://github.com/obs-websocket-community-projects/obs-websocket-js
 */
 
-const ENV = {
-    ObsWebsocketAddress: 'localhost:4444',
-    ObsWebsocketPassword: 'masterkey',
-    ObsSourceName: 'Chat Bot Audio',
-    TwitchUsername: 'sergiocabral_com',
-    TwitchPassword: 'oauth:swulwzgr60gvfqekcb5nimw6cargdl',
-    MediaSourceDirectory: 'D:\\OBS\\App.Twitch.ChatBotMedia\\videos',
-    FileSentenceSeparator: ',',
-    FileSentenceQuote: '\'',
-    FileCheckInterval: 10000,
-}
-
 const path = require('path');
 const fs = require('fs');
 const tmi = require('tmi.js');
 const OBSWebSocket = require('obs-websocket-js');
+const ENV = require('./env.json');
 
 const global = {
     /**
