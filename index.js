@@ -11,7 +11,6 @@ const path = require('path');
 const fs = require('fs');
 const tmi = require('tmi.js');
 const OBSWebSocket = require('obs-websocket-js');
-const ENV = require('./env.json');
 
 const global = {
     /**
@@ -23,6 +22,8 @@ const global = {
      * @type {tmi.Client}
      */
     irc: null,
+
+    env: require('./env.json'),
 
     sentences: [],
 
@@ -71,7 +72,7 @@ String.prototype.slug = function() {
         .replace(regexDuplicateSeparator, '');
 }
 
-function slugWithCorrelation(message) {
+function slugWithCorrelationReplacement(message) {
     message = message.slug();
     const correlation = global.correlation;
     for (let from of Object.keys(correlation)) {
@@ -85,8 +86,8 @@ function slugWithCorrelation(message) {
 async function connectToObs() {
     const obs = new OBSWebSocket();
     await obs.connect({
-        address: ENV.ObsWebsocketAddress,
-        password: ENV.ObsWebsocketPassword,
+        address: global.env.ObsWebsocketAddress,
+        password: global.env.ObsWebsocketPassword,
     });
     console.log('Websocket connected.');
     return obs;
@@ -95,10 +96,10 @@ async function connectToObs() {
 async function connectToTwitchChat() {
     const irc = new tmi.Client({
         identity: {
-            username: ENV.TwitchUsername,
-            password: ENV.TwitchPassword,
+            username: global.env.TwitchUsername,
+            password: global.env.TwitchPassword,
         },
-        channels: [ ENV.TwitchUsername ]
+        channels: [ global.env.TwitchUsername ]
     })
     await irc.connect();
     console.log('Twitch Chat connected.');
@@ -107,7 +108,7 @@ async function connectToTwitchChat() {
 
 function getMedias() {
     const mediaFileExtensions = ['mp4', 'mp3'];
-    const directory = fs.realpathSync(ENV.MediaSourceDirectory);
+    const directory = fs.realpathSync(global.env.MediaSourceDirectory);
     const files = fs
         .readdirSync(directory)
         .filter(file => 
@@ -121,13 +122,13 @@ function loadSentencesDatabase(mediaFiles) {
     const result = { };
     mediaFiles.forEach(fullpath => {
         const filename = path.basename(fullpath);
-        const sentences = filename.split(ENV.FileSentenceSeparator);
+        const sentences = filename.split(global.env.FileSentenceSeparator);
         sentences.forEach(sentence => {
             const regexFileExtension = /\.[^\.]*$/;
             sentence = sentence.trim().replace(regexFileExtension, '');
-            const isQuoted = sentence[0] == ENV.FileSentenceQuote && sentence[sentence.length - 1] == ENV.FileSentenceQuote;
+            const isQuoted = sentence[0] == global.env.FileSentenceQuote && sentence[sentence.length - 1] == global.env.FileSentenceQuote;
             if (isQuoted) sentence = sentence.substr(1, sentence.length - 2);
-            const key = slugWithCorrelation(sentence);
+            const key = slugWithCorrelationReplacement(sentence);
             result[key] = result[key] || [];
             result[key].push({ key, isQuoted, fullpath });
         });
@@ -142,7 +143,7 @@ function loadSentencesIfNecessary() {
         global.__loadSentencesIfNecessarySignature = signature;
         global.sentences = loadSentencesDatabase(mediaFiles);
     }
-    setTimeout(loadSentencesIfNecessary, ENV.FileCheckInterval);
+    setTimeout(loadSentencesIfNecessary, global.env.FileCheckInterval);
 }
 
 function filterSentenceFileData(messageSlug, messageKey, isQuoted) {
@@ -173,7 +174,7 @@ function getArrayRandomValue(array) {
 
 function findRandomSentenceFile(message) {
     const sentences = global.sentences;
-    const messageSlug = slugWithCorrelation(message);
+    const messageSlug = slugWithCorrelationReplacement(message);
     const possibleKeys = Object.keys(sentences).filter(sentenceKey => messageSlug.includes(sentenceKey));
 
     const sentenceFilesData = getSentencesForKeys(possibleKeys)
@@ -189,7 +190,7 @@ async function tryPlayMessageAsMedia(message) {
     if (sentenceFileFullpath) {
         await obs.send(
             'SetSourceSettings', {
-                sourceName: ENV.ObsSourceName,
+                sourceName: global.env.ObsSourceName,
                 sourceSettings: { local_file: sentenceFileFullpath }
         });
     }
