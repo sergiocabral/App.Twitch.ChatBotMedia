@@ -44,6 +44,7 @@ const global = {
         'tô': 'estou',
         'tá': 'está',
         'tah': 'está',
+        'doido': 'louco',
         'loco': 'louco',
         'loko': 'louco',
         'locura': 'loucura',
@@ -56,7 +57,9 @@ const global = {
         'tomá': 'tomar',
         'falô': 'falou',
         'pra': 'para',
-        'va': 'vai'
+        'va': 'vai',
+        'é': 'eh',
+        'vô': 'vou'
     }
 };
 
@@ -150,42 +153,45 @@ function loadSentencesIfNecessary() {
     }
     setTimeout(loadSentencesIfNecessary, ENV.FileCheckInterval);
 }
-loadSentencesIfNecessary();
 
 function filterSentenceFileData(messageSlug, messageKey, isQuoted) {
-    if (isQuoted) {
-        return messageSlug === messageKey;
-    } else {
-        return messageSlug.includes(messageKey);
-    }
+    return (
+        isQuoted
+            ? messageSlug === messageKey
+            : messageSlug.includes(messageKey)
+    );
 }
 
-function findRandomSentenceFile(message) {
+function getSentencesForKeys(possibleKeys) {
     const sentences = global.sentences;
-    const messageSlug = slugWithCorrelation(message);
-    const possibleKeys = Object
-        .keys(sentences)
-        .filter(sentenceKey => messageSlug.includes(sentenceKey));
-
-    if (possibleKeys.length === 0) return undefined;
-
-    const possibleSentences = possibleKeys
+    return possibleKeys
         .map(possibleKey => sentences[possibleKey])
         .reduce((result, sentenceFilesData) => {
             result.push(...sentenceFilesData);
             return result;
         }, []);
+}
 
-    const sentenceFilesData = possibleSentences
+function getArrayRandomIndex(array) {
+    return Math.floor(Math.random() * array.length * 10) % array.length;
+}
+
+function getArrayRandomValue(array) {
+    return array[getArrayRandomIndex(array)];
+}
+
+function findRandomSentenceFile(message) {
+    const sentences = global.sentences;
+    const messageSlug = slugWithCorrelation(message);
+    const possibleKeys = Object.keys(sentences).filter(sentenceKey => messageSlug.includes(sentenceKey));
+
+    if (possibleKeys.length === 0) return undefined;
+
+    const sentenceFilesData = getSentencesForKeys(possibleKeys)
         .filter(sentenceFileData => 
-            filterSentenceFileData(
-                messageSlug,
-                sentenceFileData.key,
-                sentenceFileData.isQuoted));
+            filterSentenceFileData(messageSlug, sentenceFileData.key, sentenceFileData.isQuoted));
     
-    const sentenceFilesDataRandomIndex = Math.floor(Math.random() * sentenceFilesData.length * 10) % sentenceFilesData.length;
-    const sentenceFileData = sentenceFilesData[sentenceFilesDataRandomIndex];
-    return sentenceFileData.fullpath;
+    return getArrayRandomValue(sentenceFilesData).fullpath;
 }
 
 async function tryPlayMessageAsMedia(message) {
@@ -205,6 +211,7 @@ async function onMessage(channel, tags, message, self) {
 }
 
 async function main() {
+    loadSentencesIfNecessary();
     global.obs = await connectToObs();
     global.irc = await connectToTwitchChat();
     global.irc.on('message', onMessage);
