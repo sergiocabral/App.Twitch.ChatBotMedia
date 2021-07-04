@@ -27,32 +27,7 @@ const global = {
 
     sentences: [],
 
-    correlation: {
-        'vc': 'você',
-        'cê': 'você',
-        'tu': 'você',
-        'tô': 'estou',
-        'tá': 'está',
-        'tah': 'está',
-        'doido': 'louco',
-        'doideira': 'louco',
-        'loco': 'louco',
-        'loko': 'louco',
-        'locura': 'loucura',
-        'lokura': 'loucura',
-        'num': 'não',
-        'tendi': 'entendi',
-        'intendi': 'entendi',
-        'bixo': 'bicho',
-        'coraegm': 'coragem',
-        'tomá': 'tomar',
-        'falô': 'falou',
-        'pra': 'para',
-        'va': 'vai',
-        'é': 'eh',
-        'vô': 'vou',
-        'dança': 'dançar'
-    }
+    correlations: { },
 };
 
 String.prototype.removeAccents = function() {
@@ -74,9 +49,9 @@ String.prototype.slug = function() {
 
 function slugWithCorrelationReplacement(message) {
     message = message.slug();
-    const correlation = global.correlation;
-    for (let from of Object.keys(correlation)) {
-        const to = correlation[from].slug();
+    const correlations = global.correlations;
+    for (let from of Object.keys(correlations)) {
+        const to = correlations[from].slug();
         from = from.slug();
         const regexIsolatedWordFrom = new RegExp('\\b' + from + '\\b', 'g');
         message = message.replace(regexIsolatedWordFrom, to);
@@ -141,6 +116,7 @@ function loadSentences() {
     const signature = mediaFiles.join('');
     if (global.__loadSentencesSignature != signature) {
         global.__loadSentencesSignature = signature;
+        global.correlations = require('./correlation.json');
         global.sentences = factorySentencesDatabase(mediaFiles);
     }
     setTimeout(loadSentences, global.env.FileCheckInterval);
