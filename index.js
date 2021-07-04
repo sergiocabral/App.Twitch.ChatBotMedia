@@ -1,3 +1,12 @@
+/*
+- Cliente Twitch IRC Client:
+  - https://github.com/tmijs/tmi.js
+- OBS Websocket
+  - https://github.com/Palakis/obs-websocket/releases/tag/4.9.1
+- Cliente OBS Websocket para JavaScript
+  - https://github.com/obs-websocket-community-projects/obs-websocket-js
+*/
+
 const ENV = {
     ObsWebsocketAddress: 'localhost:4444',
     ObsWebsocketPassword: 'masterkey',
@@ -5,7 +14,7 @@ const ENV = {
     TwitchUsername: 'sergiocabral_com',
     TwitchPassword: 'oauth:swulwzgr60gvfqekcb5nimw6cargdl',
     MediaSourceDirectory: 'D:\\OBS\\App.Twitch.ChatBotMedia\\videos',
-    FileSentenceSeparator: ';',
+    FileSentenceSeparator: ',',
     FileSentenceQuote: '\'',
     FileCheckInterval: 10000,
 }
@@ -26,7 +35,29 @@ var global = {
      */
     irc: null,
 
-    sentences: []
+    sentences: [],
+
+    correlation: {
+        'vc': 'você',
+        'cê': 'você',
+        'tu': 'você',
+        'tô': 'estou',
+        'tá': 'está',
+        'tah': 'está',
+        'loco': 'louco',
+        'loko': 'louco',
+        'locura': 'loucura',
+        'lokura': 'loucura',
+        'num': 'não',
+        'tendi': 'entendi',
+        'intendi': 'entendi',
+        'bixo': 'bicho',
+        'coraegm': 'coragem',
+        'tomá': 'tomar',
+        'falô': 'falou',
+        'pra': 'para',
+        'va': 'vai'
+    }
 };
 
 String.prototype.removeAccents = function() {
@@ -44,6 +75,17 @@ String.prototype.slug = function() {
         .toLowerCase()
         .replace(regexNonAlphaNumeric, slugSeparator)
         .replace(regexDuplicateSeparator, '');
+}
+
+function slugWithCorrelation(message) {
+    message = message.slug();
+    const correlation = global.correlation;
+    for (let from of Object.keys(correlation)) {
+        const to = correlation[from].slug();
+        from = from.slug();
+        message = message.replace(new RegExp('\\b' + from + '\\b', 'g'), to);
+    }
+    return message;
 }
 
 async function connectToObs() {
@@ -70,11 +112,13 @@ async function connectToTwitchChat() {
 }
 
 function getMedias() {
-    const videoFileExtension = '.mp4';
+    const mediaFileExtensions = ['mp4', 'mp3'];
     const directory = fs.realpathSync(ENV.MediaSourceDirectory);
     const files = fs
         .readdirSync(directory)
-        .filter(file => file.toLowerCase().endsWith(videoFileExtension));
+        .filter(file => 
+            mediaFileExtensions.filter(mediaFileExtension =>
+                file.toLowerCase().endsWith(`.${mediaFileExtension}`)).length);
     return files
         .map(file => path.resolve(directory, file));
 }
@@ -89,7 +133,7 @@ function loadSentencesDatabase(mediaFiles) {
             sentence = sentence.trim().replace(regexFileExtension, '');
             const isQuoted = sentence[0] == ENV.FileSentenceQuote && sentence[sentence.length - 1] == ENV.FileSentenceQuote;
             if (isQuoted) sentence = sentence.substr(1, sentence.length - 2);
-            const key = sentence.slug();
+            const key = slugWithCorrelation(sentence);
             result[key] = result[key] || [];
             result[key].push({ key, isQuoted, fullpath });
         });
@@ -108,8 +152,7 @@ function loadSentencesIfNecessary() {
 }
 loadSentencesIfNecessary();
 
-function filterSentenceFileData(message, messageKey, isQuoted) {
-    const messageSlug = message.slug();
+function filterSentenceFileData(messageSlug, messageKey, isQuoted) {
     if (isQuoted) {
         return messageSlug === messageKey;
     } else {
@@ -119,7 +162,7 @@ function filterSentenceFileData(message, messageKey, isQuoted) {
 
 function findRandomSentenceFile(message) {
     const sentences = global.sentences;
-    const messageSlug = message.slug();
+    const messageSlug = slugWithCorrelation(message);
     const possibleKeys = Object
         .keys(sentences)
         .filter(sentenceKey => messageSlug.includes(sentenceKey));
@@ -136,7 +179,7 @@ function findRandomSentenceFile(message) {
     const sentenceFilesData = possibleSentences
         .filter(sentenceFileData => 
             filterSentenceFileData(
-                message,
+                messageSlug,
                 sentenceFileData.key,
                 sentenceFileData.isQuoted));
     
