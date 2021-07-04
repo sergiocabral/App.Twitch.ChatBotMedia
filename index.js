@@ -24,7 +24,7 @@ const fs = require('fs');
 const tmi = require('tmi.js');
 const OBSWebSocket = require('obs-websocket-js');
 
-var global = {
+const global = {
     /**
      * @type {OBSWebSocket}
      */
