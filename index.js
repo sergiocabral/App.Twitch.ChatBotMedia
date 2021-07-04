@@ -119,8 +119,21 @@ function filterSentenceFileData(message, messageKey, isQuoted) {
 
 function findRandomSentenceFile(message) {
     const sentences = global.sentences;
-    const sentenceKey = message.slug();
-    const sentenceFilesData = sentences[sentenceKey]
+    const messageSlug = message.slug();
+    const possibleKeys = Object
+        .keys(sentences)
+        .filter(sentenceKey => messageSlug.includes(sentenceKey));
+
+    if (possibleKeys.length === 0) return undefined;
+
+    const possibleSentences = possibleKeys
+        .map(possibleKey => sentences[possibleKey])
+        .reduce((result, sentenceFilesData) => {
+            result.push(...sentenceFilesData);
+            return result;
+        }, []);
+
+    const sentenceFilesData = possibleSentences
         .filter(sentenceFileData => 
             filterSentenceFileData(
                 message,
