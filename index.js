@@ -23,7 +23,7 @@ const global = {
      */
     irc: null,
 
-    env: require('./env.json'),
+    environment: require('./env.json'),
 
     sentences: [],
 
@@ -62,8 +62,8 @@ function slugWithCorrelationReplacement(message) {
 async function connectToObs() {
     const obs = new OBSWebSocket();
     await obs.connect({
-        address: global.env.ObsWebsocketAddress,
-        password: global.env.ObsWebsocketPassword,
+        address: global.environment.ObsWebsocketAddress,
+        password: global.environment.ObsWebsocketPassword,
     });
     console.log('Websocket connected.');
     return obs;
@@ -72,10 +72,10 @@ async function connectToObs() {
 async function connectToTwitchChat() {
     const irc = new tmi.Client({
         identity: {
-            username: global.env.TwitchUsername,
-            password: global.env.TwitchPassword,
+            username: global.environment.TwitchUsername,
+            password: global.environment.TwitchPassword,
         },
-        channels: [ global.env.TwitchUsername ]
+        channels: [ global.environment.TwitchUsername ]
     })
     await irc.connect();
     console.log('Twitch Chat connected.');
@@ -84,7 +84,7 @@ async function connectToTwitchChat() {
 
 function getMedias() {
     const mediaFileExtensions = ['mp4', 'mp3'];
-    const directory = fs.realpathSync(global.env.MediaSourceDirectory);
+    const directory = fs.realpathSync(global.environment.MediaSourceDirectory);
     const files = fs
         .readdirSync(directory)
         .filter(file => 
@@ -97,11 +97,11 @@ function factorySentencesDatabase(mediaFiles) {
     const result = { };
     mediaFiles.forEach(fullpath => {
         const filename = path.basename(fullpath);
-        const sentences = filename.split(global.env.FileSentenceSeparator);
+        const sentences = filename.split(global.environment.FileSentenceSeparator);
         sentences.forEach(sentence => {
             const regexFileExtension = /\.[^\.]*$/;
             sentence = sentence.trim().replace(regexFileExtension, '');
-            const isQuoted = sentence[0] == global.env.FileSentenceQuote && sentence[sentence.length - 1] == global.env.FileSentenceQuote;
+            const isQuoted = sentence[0] == global.environment.FileSentenceQuote && sentence[sentence.length - 1] == global.environment.FileSentenceQuote;
             if (isQuoted) sentence = sentence.substr(1, sentence.length - 2);
             const key = slugWithCorrelationReplacement(sentence);
             result[key] = result[key] || [];
@@ -119,7 +119,7 @@ function loadSentences() {
         global.correlations = require('./correlation.json');
         global.sentences = factorySentencesDatabase(mediaFiles);
     }
-    setTimeout(loadSentences, global.env.FileCheckInterval);
+    setTimeout(loadSentences, global.environment.FileCheckInterval);
 }
 
 function filterSentenceFileData(messageSlug, messageKey, isQuoted) {
@@ -164,7 +164,7 @@ async function playMediaIntoOBS(filePath) {
     const obs = global.obs;
     await obs.send(
         'SetSourceSettings', {
-            sourceName: global.env.ObsSourceName,
+            sourceName: global.environment.ObsSourceName,
             sourceSettings: { local_file: filePath }
     });
 }
