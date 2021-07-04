@@ -7,7 +7,7 @@ const global = {
     obs: null,
     irc: null,
     environment: require('./env.json'),
-    sentences: [],
+    sentences: { },
     correlations: { },
 };
 
@@ -103,8 +103,12 @@ function loadSentences() {
     const signature = mediaFiles.join('');
     if (global.__loadSentencesSignature != signature) {
         global.__loadSentencesSignature = signature;
+
         global.correlations = requireWithoutCache('./correlation.json');
+        console.log(`Correlations loaded:\n${Object.keys(global.correlations).sort((a, b) => a.slug().localeCompare(b.slug())).map(correlation => `  ${correlation} => ${global.correlations[correlation]}`).join('\n')}`);
+
         global.sentences = factorySentencesDatabase(mediaFiles);
+        console.log(`Sentences loaded:\n${Object.keys(global.sentences).sort().map(sentence => `  ${sentence}: ${global.sentences[sentence].length} files`).join('\n')}`);
     }
     setTimeout(loadSentences, global.environment.FileCheckInterval);
 }
@@ -154,11 +158,15 @@ async function playMediaIntoOBS(filePath) {
             sourceName: global.environment.ObsSourceName,
             sourceSettings: { local_file: filePath }
     });
+    console.log(`Play file: ${path.basename(filePath)}`);
 }
 
 async function tryPlayMessageAsMedia(message) {
     const sentenceFileFullpath = findRandomSentenceFile(message);
-    if (sentenceFileFullpath) await playMediaIntoOBS(sentenceFileFullpath);
+    if (sentenceFileFullpath) {
+        console.log(`Message: ${message}`);
+        await playMediaIntoOBS(sentenceFileFullpath);
+    }
 }
 
 async function onMessage(channel, tags, message, self) {
