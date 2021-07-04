@@ -30,6 +30,12 @@ const global = {
     correlations: { },
 };
 
+function requireWithoutCache(module) {
+    fs.watchFile(path.resolve(module), () =>
+        delete require.cache[require.resolve(module)]);
+    return require(module);
+}
+
 String.prototype.removeAccents = function() {
     return this
         .normalize('NFD')
@@ -116,7 +122,7 @@ function loadSentences() {
     const signature = mediaFiles.join('');
     if (global.__loadSentencesSignature != signature) {
         global.__loadSentencesSignature = signature;
-        global.correlations = require('./correlation.json');
+        global.correlations = requireWithoutCache('./correlation.json');
         global.sentences = factorySentencesDatabase(mediaFiles);
     }
     setTimeout(loadSentences, global.environment.FileCheckInterval);
