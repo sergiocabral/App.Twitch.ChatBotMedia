@@ -151,26 +151,32 @@ function findRandomSentenceFile(message) {
     return getArrayRandomValue(sentenceFilesData)?.fullpath;
 }
 
-async function playMediaIntoOBS(filePath) {
+async function playMediaIntoOBS(filePath, sourceName) {
     const obs = global.obs;
     await obs.send(
         'SetSourceSettings', {
-            sourceName: global.environment.ObsSourceName,
+            sourceName: sourceName,
             sourceSettings: { local_file: filePath }
     });
-    console.log(`Play file: ${path.basename(filePath)}`);
 }
 
 async function tryPlayMessageAsMedia(message) {
     const sentenceFileFullpath = findRandomSentenceFile(message);
     if (sentenceFileFullpath) {
         console.log(`Message: ${message}`);
-        await playMediaIntoOBS(sentenceFileFullpath);
+        await playMediaIntoOBS(sentenceFileFullpath, global.environment.ObsSourceName);
+        console.log(`Play file: ${path.basename(sentenceFileFullpath)}`);
     }
+}
+
+async function playNotifySound() {
+    const notifySoundFileFullpath = fs.realpathSync(global.environment.NotificationFilename);
+    await playMediaIntoOBS(notifySoundFileFullpath, global.environment.NotificationObsSourceName);
 }
 
 async function onMessage(channel, tags, message, self) {
     await tryPlayMessageAsMedia(message);
+    await playNotifySound();
 }
 
 async function main() {
