@@ -153,11 +153,15 @@ function findRandomSentenceFile(message) {
 
 async function playMediaIntoOBS(filePath, sourceName) {
     const obs = global.obs;
-    await obs.send(
-        'SetSourceSettings', {
-            sourceName: sourceName,
-            sourceSettings: { local_file: filePath }
-    });
+    try {
+        await obs.send(
+            'SetSourceSettings', {
+                sourceName: sourceName,
+                sourceSettings: { local_file: filePath }
+        });
+    } catch (error) {
+        console.error(`Cannot play media into OBS. Source "${sourceName}" maybe  exists.`);
+    }
 }
 
 async function tryPlayMessageAsMedia(message) {
