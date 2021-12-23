@@ -9,6 +9,7 @@ const global = {
     environment: require('./env.json'),
     sentences: { },
     correlations: { },
+    playing: {},
 };
 
 function requireWithoutCache(module) {
@@ -145,20 +146,26 @@ function findRandomSentenceFile(message) {
     const possibleKeys = Object.keys(sentences).filter(sentenceKey => messageSlug.includes(sentenceKey));
 
     const sentenceFilesData = getSentencesForKeys(possibleKeys)
-        .filter(sentenceFileData => 
+        .filter(sentenceFileData =>
             filterSentenceFileData(messageSlug, sentenceFileData.key, sentenceFileData.isQuoted));
-    
+
     return getArrayRandomValue(sentenceFilesData)?.fullpath;
 }
 
-async function playMediaIntoOBS(filePath, sourceName) {
+async function playMediaIntoOBS(filePath, sourceName, timeout = 30000) {
     const obs = global.obs;
     try {
+        clearTimeout(global.playing[sourceName]);
         await obs.send(
             'SetSourceSettings', {
                 sourceName: sourceName,
                 sourceSettings: { local_file: filePath }
         });
+        global.playing[sourceName] = setTimeout(() => obs.send(
+            'SetSourceSettings', {
+                sourceName: sourceName,
+                sourceSettings: { local_file: `${filePath}-not-exists` }
+        }), timeout);
     } catch (error) {
         console.error(`Cannot play media into OBS. Source "${sourceName}" maybe  exists.`);
     }
@@ -168,14 +175,14 @@ async function tryPlayMessageAsMedia(message) {
     const sentenceFileFullpath = findRandomSentenceFile(message);
     if (sentenceFileFullpath) {
         console.log(`Message: ${message}`);
-        await playMediaIntoOBS(sentenceFileFullpath, global.environment.ObsSourceName);
+        await playMediaIntoOBS(sentenceFileFullpath, global.environment.ObsSourceName, 10000);
         console.log(`Play file: ${path.basename(sentenceFileFullpath)}`);
     }
 }
 
 async function playNotifySound() {
     const notifySoundFileFullpath = fs.realpathSync(global.environment.NotificationFilename);
-    await playMediaIntoOBS(notifySoundFileFullpath, global.environment.NotificationObsSourceName);
+    await playMediaIntoOBS(notifySoundFileFullpath, global.environment.NotificationObsSourceName, 1000);
 }
 
 async function onMessage(channel, tags, message, self) {
