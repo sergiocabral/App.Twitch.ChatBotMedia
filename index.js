@@ -175,7 +175,7 @@ async function tryPlayMessageAsMedia(message) {
     const sentenceFileFullpath = findRandomSentenceFile(message);
     if (sentenceFileFullpath) {
         console.log(`Message: ${message}`);
-        await playMediaIntoOBS(sentenceFileFullpath, global.environment.ObsSourceName, 10000);
+        await playMediaIntoOBS(sentenceFileFullpath, global.environment.ObsSourceName);
         console.log(`Play file: ${path.basename(sentenceFileFullpath)}`);
     }
 }
