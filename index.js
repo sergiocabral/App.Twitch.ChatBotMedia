@@ -143,7 +143,8 @@ function getArrayRandomValue(array) {
 function findRandomSentenceFile(message) {
     const sentences = global.sentences;
     const messageSlug = slugWithCorrelationReplacement(message);
-    const possibleKeys = Object.keys(sentences).filter(sentenceKey => messageSlug.includes(sentenceKey));
+    const possibleKeys = Object.keys(sentences).filter(sentenceKey =>
+        new RegExp('\\b' + sentenceKey + '\\b').test(messageSlug));
 
     const sentenceFilesData = getSentencesForKeys(possibleKeys)
         .filter(sentenceFileData =>
