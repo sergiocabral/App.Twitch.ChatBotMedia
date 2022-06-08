@@ -48,11 +48,17 @@ function slugWithCorrelationReplacement(message) {
 }
 
 async function connectToObs() {
+    console.log(`Connecting to OBS in ${global.environment.ObsWebsocketAddress}.`);
     const obs = new OBSWebSocket();
-    await obs.connect({
-        address: global.environment.ObsWebsocketAddress,
-        password: global.environment.ObsWebsocketPassword,
-    });
+    try {
+        await obs.connect({
+            address: global.environment.ObsWebsocketAddress,
+            password: global.environment.ObsWebsocketPassword,
+        });
+    } catch (error) {
+        console.error("Error when try to connect OBS: " + JSON.stringify(error));
+        throw error;
+    }
     console.log('Websocket connected.');
     return obs;
 }
@@ -153,7 +159,7 @@ function findRandomSentenceFile(message) {
     return getArrayRandomValue(sentenceFilesData)?.fullpath;
 }
 
-async function playMediaIntoOBS(filePath, sourceName, timeout = 30000) {
+async function playMediaIntoOBS(filePath, sourceName, timeout = 20000) {
     const obs = global.obs;
     try {
         clearTimeout(global.playing[sourceName]);
