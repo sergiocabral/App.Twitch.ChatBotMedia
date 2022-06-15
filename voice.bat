@@ -1,0 +1,1 @@
+spx recognize --microphone --source pt-BR --key db4da9e822eb42758c585f4c55408d81 --region brazilsouth > voice.txt

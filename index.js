@@ -197,8 +197,50 @@ async function onMessage(channel, tags, message, self) {
     await playNotifySound();
 }
 
+let recognizeVoiceTry = 10;
+function recognizeVoice() {
+    const outputVoiceFileName = "voice.txt"
+    const outputVoiceFilePath = path.join(__dirname, outputVoiceFileName);
+
+    if (!fs.existsSync(outputVoiceFilePath)) {
+        console.log(`Reconhecimento de voz não encontrado: ${outputVoiceFilePath}`);
+        if (recognizeVoiceTry-- > 0) {
+            setTimeout(recognizeVoice, 10000);
+        }
+        return;
+    }
+    console.log(`Reconhecimento de voz ativado: ${outputVoiceFilePath}`);
+
+    const outputVoiceFile = fs.openSync(outputVoiceFilePath, 'r');
+    let lastSize = 0;
+    let first = true;
+    fs.watchFile(outputVoiceFilePath, (curr, prev) => {
+        if (curr.mtime <= prev.mtime) {
+            return;
+        }
+
+        const currentSize = fs.fstatSync(outputVoiceFile).size;
+        const bufferSize = currentSize - lastSize;
+        const buffer = Buffer.alloc(currentSize);
+        const bytesRead = fs.readSync(outputVoiceFile, buffer, lastSize, bufferSize);
+        const content = buffer.toString().trim();
+
+        if (!first && content) {
+            console.log(`Conteúdo recebido:\n${content}`);
+            const messages = content.match(/(?<=^RECOGNIZED: ).*$/gm) ?? [];
+            for (const message of messages) {
+                tryPlayMessageAsMedia(message);
+            }
+        }
+
+        first = false;
+        lastSize = currentSize;
+    });
+}
+
 async function main() {
     loadSentences();
+    recognizeVoice();
     global.obs = await connectToObs();
     global.irc = await connectToTwitchChat();
     global.irc.on('message', onMessage);
