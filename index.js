@@ -214,6 +214,7 @@ function recognizeVoice() {
     const outputVoiceFile = fs.openSync(outputVoiceFilePath, 'r');
     let lastSize = 0;
     let first = true;
+    let playMeme = false;
     fs.watchFile(outputVoiceFilePath, (curr, prev) => {
         if (curr.mtime <= prev.mtime) {
             return;
@@ -225,11 +226,15 @@ function recognizeVoice() {
         const bytesRead = fs.readSync(outputVoiceFile, buffer, lastSize, bufferSize);
         const content = buffer.toString().trim();
 
-        if (!first && content) {
-            console.log(`Conteúdo recebido:\n${content}`);
-            const messages = content.match(/(?<=^RECOGNIZED: ).*$/gm) ?? [];
+        playMeme = content.includes("meme");
+
+        if (!first && content && playMeme) {
+            playMeme = false;
+            console.log(`Conteúdo recebido:\n---\n${content}\n---\n`);
+            const messages = content.match(/(?<=RECOGNIZED: ).*$/gm) ?? [];
             for (const message of messages) {
-                tryPlayMessageAsMedia(message);
+                console.log(`Voice message: ${message}`);
+                tryPlayMessageAsMedia(message.slug().replace(/-/g, ' '));
             }
         }
 
