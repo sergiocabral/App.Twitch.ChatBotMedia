@@ -3,6 +3,8 @@ const fs = require('fs');
 const tmi = require('tmi.js');
 const OBSWebSocket = require('obs-websocket-js');
 
+process.chdir(__dirname);
+
 const global = {
     obs: null,
     irc: null,
