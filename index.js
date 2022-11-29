@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const tmi = require('tmi.js');
-const OBSWebSocket = require('obs-websocket-js');
+const OBSWebSocket = require('obs-websocket-js').default;
 
 process.chdir(__dirname);
 
@@ -53,10 +53,10 @@ async function connectToObs() {
     console.log(`Connecting to OBS in ${global.environment.ObsWebsocketAddress}.`);
     const obs = new OBSWebSocket();
     try {
-        await obs.connect({
-            address: global.environment.ObsWebsocketAddress,
-            password: global.environment.ObsWebsocketPassword,
-        });
+        await obs.connect(
+            `ws://${global.environment.ObsWebsocketAddress}`,
+            global.environment.ObsWebsocketPassword
+        );
     } catch (error) {
         console.error("Error when try to connect OBS: " + JSON.stringify(error));
         throw error;
@@ -71,7 +71,7 @@ async function connectToTwitchChat() {
             username: global.environment.TwitchUsername,
             password: global.environment.TwitchPassword,
         },
-        channels: [ global.environment.TwitchUsername ]
+        channels: global.environment.TwitchChannels
     })
     await irc.connect();
     console.log('Twitch Chat connected.');
@@ -79,14 +79,18 @@ async function connectToTwitchChat() {
 }
 
 function getMedias() {
+    const result = [];
     const mediaFileExtensions = ['mp4', 'mp3'];
-    const directory = fs.realpathSync(global.environment.MediaSourceDirectory);
-    const files = fs
-        .readdirSync(directory)
-        .filter(file => 
-            mediaFileExtensions.filter(mediaFileExtension =>
-                file.toLowerCase().endsWith(`.${mediaFileExtension}`)).length);
-    return files.map(file => path.resolve(directory, file));
+    for (const mediaSourceDirectory of global.environment.MediaSourceDirectory) {
+        const directory = fs.realpathSync(mediaSourceDirectory);
+        const files = fs
+            .readdirSync(directory)
+            .filter(file => 
+                mediaFileExtensions.filter(mediaFileExtension =>
+                    file.toLowerCase().endsWith(`.${mediaFileExtension}`)).length);
+        result.push(...files.map(file => path.resolve(directory, file)));
+    }
+    return result;
 }
 
 function factorySentencesDatabase(mediaFiles) {
@@ -247,7 +251,7 @@ function recognizeVoice() {
 
 async function main() {
     loadSentences();
-    recognizeVoice();
+    // recognizeVoice();
     global.obs = await connectToObs();
     global.irc = await connectToTwitchChat();
     global.irc.on('message', onMessage);
