@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "obs-websocket-js": "^4.0.3",
+    "obs-websocket-js": "^5.0.2",
     "tmi.js": "^1.8.5"
   }
 }
