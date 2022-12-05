@@ -169,15 +169,14 @@ async function playMediaIntoOBS(filePath, sourceName, timeout = 20000) {
     const obs = global.obs;
     try {
         clearTimeout(global.playing[sourceName]);
-        await obs.send(
-            'SetSourceSettings', {
-                sourceName: sourceName,
-                sourceSettings: { local_file: filePath }
+        const result = await obs.call('SetInputSettings', {
+            inputName: sourceName,
+            inputSettings: { local_file: filePath }
         });
-        global.playing[sourceName] = setTimeout(() => obs.send(
-            'SetSourceSettings', {
-                sourceName: sourceName,
-                sourceSettings: { local_file: `${filePath}-not-exists` }
+        global.playing[sourceName] = setTimeout(() => obs.call(
+            'SetInputSettings', {
+                inputName: sourceName,
+                inputSettings: { local_file: `${filePath}-not-exists` }
         }), timeout);
     } catch (error) {
         console.error(`Cannot play media into OBS. Source "${sourceName}" maybe  exists.`);
