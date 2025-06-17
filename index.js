@@ -3,8 +3,8 @@ import OBSWebSocket from 'obs-websocket-js'
 import tmi from 'tmi.js'
 import { EventEmitter } from 'events'
 import { exec } from 'child_process'
-import { existsSync, realpathSync } from 'fs'
-import { dirname, join } from 'path'
+import { existsSync, realpathSync, readdirSync } from 'fs'
+import { dirname, extname, basename } from 'path'
 import { fileURLToPath } from 'url'
 
 dotenv.config()
@@ -184,7 +184,45 @@ class TwitchControl extends EventEmitter {
    */
   async disconnect() {
     await this._client.disconnect()
+    this._client = null
     console.debug('Disconnected from Twitch Chat')
+  }
+
+  /**
+   * Envia uma mensagem para um ou mais canais da Twitch.
+   * Se nenhum canal for informado, envia para todos configurados.
+   * @param {string} message - Mensagem a ser enviada.
+   * @param {...string} channels - Lista de canais (opcional). Se vazio, usa os canais configurados.
+   * @returns {Promise<boolean>} - Retorna true se enviado com sucesso, false se falhar.
+   */
+  async sendMessage(message, ...channels) {
+    if (!message) {
+      console.warn('Twitch message not provided — skipping send')
+      return false
+    }
+
+    if (!this._client) {
+      console.warn('Twitch client is not connected — cannot send message')
+      return false
+    }
+
+    const targetChannels = channels.length > 0 ? channels : this._channels
+
+    if (targetChannels.length === 0) {
+      console.warn('No Twitch channels available to send message')
+      return false
+    }
+
+    try {
+      for (const channel of targetChannels) {
+        console.debug(`Sending message to Twitch channel '${channel}': ${message}`)
+        await this._client.say(channel, message)
+      }
+      return true
+    } catch (error) {
+      console.error(`Failed to send Twitch message. Error: ${Utils.errorMessage(error)}`)
+      return false
+    }
   }
 }
 
@@ -311,6 +349,13 @@ class MemeControl {
    */
   _obsMemeSource
 
+    /**
+   * Lista dos memes disponíveis (sem extensão).
+   * @type {string[]}
+   * @private
+   */
+  memes = []
+
   constructor(obsControl) {
     console.debug(`Initializing ${this.constructor.name} class`)
 
@@ -318,6 +363,8 @@ class MemeControl {
     this._scriptPath = String(process.env.MEME_SCRIPT_PATH || '').trim()
     this._obsMemeScene = String(process.env.OBS_MEME_SCENE || '').trim()
     this._obsMemeSource = String(process.env.OBS_MEME_SOURCE || '').trim()
+
+    this._loadMemes()
   }
 
   /**
@@ -337,6 +384,7 @@ class MemeControl {
 
     if (this._obsControl?.constructor?.name !== ObsControl.name) {
       console.warn('Invalid OBS Control instance — meme features requiring OBS will be disabled')
+      this._obsControl = null
       return false
     }
 
@@ -354,27 +402,30 @@ class MemeControl {
    * @param {string} memeName 
    * @returns {Promise<boolean>}
    */
-  async play(memeName) {
-    if (!memeName) {
-      console.warn('Meme name not provided — skipping meme playback')
-      return false
+  async play(message) {
+    message = Utils.slug(message)
+
+    for (const memeName of this.memes) {
+      if (message.includes(memeName)) {
+        console.debug(`Starting meme playback: '${memeName}'`)
+
+        await this._obsControl?.setVisible(this._obsMemeScene, this._obsMemeSource, false)
+
+        const executed = await this._callScript(memeName)
+
+        if (!executed) {
+          console.warn(`Meme script '${memeName}' failed — skipping OBS visibility change`)
+          return false
+        }
+
+        await this._obsControl?.setVisible(this._obsMemeScene, this._obsMemeSource, true)
+
+        console.debug(`Meme playback completed: '${memeName}'`)
+        return true
+      }
     }
 
-    console.debug(`Starting meme playback: '${memeName}'`)
-
-    await this._obsControl.setVisible(this._obsMemeScene, this._obsMemeSource, false)
-
-    const executed = await this._callScript(memeName)
-
-    if (!executed) {
-      console.warn(`Meme script '${memeName}' failed — skipping OBS visibility change`)
-      return false
-    }
-
-    await this._obsControl.setVisible(this._obsMemeScene, this._obsMemeSource, true)
-
-    console.debug(`Meme playback completed: '${memeName}'`)
-    return true
+    return null
   }
 
   /**
@@ -404,6 +455,40 @@ class MemeControl {
         setTimeout(() => resolve(true), timeout)
       })
     })
+  }
+
+  /**
+   * Carrega os memes disponíveis no diretório do script.
+   * @returns {Promise<void>}
+   */
+  async _loadMemes() {
+    try {
+      const scriptDir = dirname(this._scriptPath)
+
+      if (!existsSync(scriptDir)) {
+        console.warn(`Meme directory does not exist: "${scriptDir}"`)
+        this.memes = []
+        return
+      }
+
+      const files = readdirSync(scriptDir)
+      const memes = files
+        .filter(file => {
+          const ext = extname(file).toLowerCase()
+          return ext === '.mp4' || ext === '.mp3'
+        })
+        .map(file => basename(file, extname(file)))
+
+      this.memes = memes
+
+      console.debug(`Memes loaded: [${this.memes.join(', ')}]`)
+    } catch (error) {
+      console.error(`Failed to load memes. Error: ${Utils.errorMessage(error)}`)
+      this.memes = []
+    }
+
+    const timeout = 10000
+    setTimeout(() => this._loadMemes(), timeout)
   }
 }
 
@@ -491,12 +576,18 @@ class App {
     if (self) return
 
     const user = (Array.isArray(tags) ? tags : [])['display-name'] || tags.username || 'Unknown'
-    const command = Utils.slug(message)
 
     console.debug(`[Twitch][${channel}] Message received from '${user}': ${message}`)
 
-    this._playerControl.play()
-    this._memeControl.play(command)
+    this._playerControl?.play()
+
+    if (this._memeControl) {
+      if (['!meme', '!memes'].includes(message.toLowerCase().trim())) {
+        this._twitchControl?.sendMessage(`Memes: ${this._memeControl.memes.join(', ')}`, channel)
+      } else {
+        this._memeControl.play(message)
+      }
+    }
   }
 }
 
