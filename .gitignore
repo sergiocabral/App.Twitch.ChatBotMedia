@@ -1,6 +1,2 @@
 node_modules
-premiere
-videos
-*.log
-*.tsv
-voice.txt
+.env

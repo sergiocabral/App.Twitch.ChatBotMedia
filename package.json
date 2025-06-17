@@ -1,15 +1,15 @@
 {
   "name": "app.twitch.chatbotmedia",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node --trace-warnings index.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "obs-websocket-js": "^5.0.2",
-    "tmi.js": "^1.8.5"
+    "dotenv": "^16.5.0"
   }
 }
