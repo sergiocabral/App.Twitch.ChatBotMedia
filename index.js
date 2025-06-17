@@ -2,6 +2,8 @@ import tmi from 'tmi.js'
 import OBSWebSocket from 'obs-websocket-js'
 import dotenv from 'dotenv'
 import { exec } from 'child_process'
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 class App {
   client
@@ -25,6 +27,61 @@ class App {
         )
       }
     })
+  }
+
+  async executeBat(meme) {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const batPath = join(__dirname, '..', 'Memes', '_play_meme.bat');
+
+    return new Promise((resolve, reject) => {
+      exec(`"${batPath}" "${meme}"`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Erro ao executar .bat: ${String(error)}`);
+          reject(error);
+        } else {
+          console.log(`Meme '${meme}' executado`);
+          resolve(stdout);
+        }
+      });
+    });
+  }
+
+  async playMeme(meme) {
+    if (!meme) return;
+
+    const scene = process.env.OBS_SOURCE_SCENE ?? ''
+    const source = process.env.OBS_SOURCE_NAME ?? ''
+
+    try {
+      const { sceneItems } = await this.obs.call('GetSceneItemList', {
+        sceneName: scene,
+      })
+
+      const item = sceneItems.find(i => i.sourceName === source)
+      if (!item) throw new Error(`Source "${source}" not found in scene "${scene}"`)
+
+      const id = item.sceneItemId
+
+      await this.obs.call('SetSceneItemEnabled', {
+        sceneName: scene,
+        sceneItemId: id,
+        sceneItemEnabled: false,
+      })
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      await this.executeBat(meme)
+
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      await this.obs.call('SetSceneItemEnabled', {
+        sceneName: scene,
+        sceneItemId: id,
+        sceneItemEnabled: true,
+      })
+    } catch (error) {
+      console.error('Erro no playMeme:', error)
+    }
   }
 
   async connectToOBS() {
@@ -66,6 +123,7 @@ class App {
       if (self) return
       console.log(`[${tags['display-name']}] ${message}`)
       this.notify()
+      this.playMeme(message)
     })
 
     await this.client.connect()
