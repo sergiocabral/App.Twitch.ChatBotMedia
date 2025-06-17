@@ -311,22 +311,13 @@ class MemeControl {
    */
   _obsMemeSource
 
-  /**
-   * Timeout aplicado após executar o script, antes de alterar a visibilidade no OBS.
-   * @type {number}
-   * @private
-   */
-  _timeout
-
   constructor(obsControl) {
     console.debug(`Initializing ${this.constructor.name} class`)
 
     this._obsControl = obsControl
-    this._scriptPath = String(process.env.MEME_SCRIPT_PATH || '').trim() ||
-      join(__dirname, '..', 'Memes', '_play_meme.bat')
+    this._scriptPath = String(process.env.MEME_SCRIPT_PATH || '').trim()
     this._obsMemeScene = String(process.env.OBS_MEME_SCENE || '').trim()
     this._obsMemeSource = String(process.env.OBS_MEME_SOURCE || '').trim()
-    this._timeout = Number(process.env.MEME_TIMEOUT) || 1000
   }
 
   /**
@@ -409,7 +400,8 @@ class MemeControl {
 
         console.debug(`Meme script '${memeName}' executed successfully`)
 
-        setTimeout(() => resolve(true), this._timeout)
+        const timeout = 1000
+        setTimeout(() => resolve(true), timeout)
       })
     })
   }
