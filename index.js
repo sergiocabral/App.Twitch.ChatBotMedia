@@ -1,30 +1,68 @@
-import dotenv from 'dotenv'
-import { exec } from 'child_process'
+import tmi from 'tmi.js';
+import dotenv from 'dotenv';
+import { exec } from 'child_process';
 
 class App {
-  initialize() {
-    console.debug('Initializing...')
-    dotenv.config()
+  client;
+
+  async initialize() {
+    console.debug('Initializing...');
+    dotenv.config();
+    await this.connectToTwitch();
   }
 
   notify(file = 'notification.wav') {
-    const command = `ffplay -nodisp -autoexit -hide_banner -loglevel quiet "${file}"`
-    exec(command, error => {
+    const command = `ffplay -nodisp -autoexit -hide_banner -loglevel quiet "${file}"`;
+    exec(command, (error) => {
       if (error) {
-        console.error(`Media player not found: ${String(error ?? '').replace(/\n|\r/g, ' ').replace(/\s+/g, ' ')}`)
+        console.error(
+          `Media player not found: ${String(error ?? '')
+            .replace(/\n|\r/g, ' ')
+            .replace(/\s+/g, ' ')}`
+        );
       }
-    })
+    });
+  }
+
+  async connectToTwitch() {
+    const username = process.env.TWITCH_USERNAME;
+    const oauth = process.env.TWITCH_OAUTH;
+    const channel = process.env.TWITCH_CHANNEL;
+
+    if (!username || !oauth || !channel) {
+      throw new Error('Missing Twitch credentials in .env');
+    }
+
+    this.client = new tmi.Client({
+      options: { debug: true },
+      identity: {
+        username,
+        password: oauth,
+      },
+      channels: [channel],
+    });
+
+    this.client.on('connected', (address, port) => {
+      console.log(`Connected to ${address}:${port}`);
+    });
+
+    this.client.on('message', (channel, tags, message, self) => {
+      if (self) return;
+      console.log(`[${tags['display-name']}] ${message}`);
+      this.notify();
+    });
+
+    await this.client.connect();
   }
 
   async run() {
     try {
-      this.initialize()
-      await this.notify()
-      console.log('Running.')
+      await this.initialize();
+      console.log('Running.');
     } catch (error) {
-      console.error('Erro ao executar:', error)
+      console.error('Erro ao executar:', error);
     }
   }
 }
 
-new App().run()
+new App().run();
