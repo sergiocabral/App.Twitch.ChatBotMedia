@@ -1,3 +1,7 @@
 @echo off
+
 cd /d "%~dp0"
-node "%~dp0index.js"
+rem node "%~dp0index.js"
+
+npm install
+npm start
